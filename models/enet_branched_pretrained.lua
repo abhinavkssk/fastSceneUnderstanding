@@ -63,7 +63,6 @@ local function createModel(nClasses)
         end
         split:add(branch)
     end
-
     model:add(split)
 
     -- find pooling modules
@@ -75,10 +74,11 @@ local function createModel(nClasses)
             end
         end
     )
+
     assert(#pooling_modules == 3, 'There should be 3 pooling modules')
 
     -- add decoder part
-    for i = 1, 3 do
+    for i = 1, 2 do
         local branch = branches[i]
         branch:add(pretrained_model:get(27):clone())
         branch:add(pretrained_model:get(28):clone())

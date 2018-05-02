@@ -58,12 +58,12 @@ end
 
 local segmentation_criterion = require('lossf/loss')('softmaxLoss', class_weights)
 local instance_criterion = require('lossf/loss')('instanceLoss')
-local depth_criterion = require('lossf/loss')('huberLoss')
+
 
 local criterion = nn.ParallelCriterion()
 criterion:add(segmentation_criterion)
 criterion:add(instance_criterion)
-criterion:add(depth_criterion)
+
 
 criterion:cuda()
 
@@ -74,7 +74,7 @@ print('Val dataset size: ' .. val_size)
 local lossMeter = tnt.AverageValueMeter()
 local segmMeter = tnt.AverageValueMeter()
 local instMeter = tnt.AverageValueMeter()
-local depthMeter = tnt.AverageValueMeter()
+
 
 local logger
 local logger_seperate
@@ -90,14 +90,14 @@ if (opts.val == true) then
     logger:setNames {'train loss', 'val loss'}
     logger:style {'-', '-'}
 
-    logger_seperate:setNames {'segm(t)', 'inst(t)', 'depth(t)', 'segm(v)', 'inst(v)', 'depth(v)'}
-    logger_seperate:style {'-', '-', '-', '-', '-', '-'}
+    logger_seperate:setNames {'segm(t)', 'inst(t)',  'segm(v)', 'inst(v)'}
+    logger_seperate:style {'-', '-', '-', '-'}
 else
     logger:setNames {'train loss'}
     logger:style {'-'}
 
-    logger_seperate:setNames {'segm', 'inst', 'depth'}
-    logger_seperate:style {'-', '-', '-'}
+    logger_seperate:setNames {'segm', 'inst'}
+    logger_seperate:style {'-', '-'}
 end
 
 local best_train_loss = 1000
@@ -112,13 +112,12 @@ local engine = tnt.myEngine()
 local input = torch.CudaTensor()
 local targetSegm = torch.CudaByteTensor()
 local targetInst = torch.CudaByteTensor()
-local targetDepth = torch.CudaTensor()
+
 
 engine.hooks.onStart = function(state)
     lossMeter:reset()
     segmMeter:reset()
     instMeter:reset()
-    depthMeter:reset()
 end
 
 engine.hooks.onStartEpoch =
@@ -130,7 +129,7 @@ engine.hooks.onStartEpoch =
     lossMeter:reset()
     segmMeter:reset()
     instMeter:reset()
-    depthMeter:reset()
+
 
     if (opts.freezeBN) then
         model:apply(
@@ -156,7 +155,7 @@ engine.hooks.onSample = function(state)
     -- copy data to containers on GPU
     input:resize(state.sample.image:size()):copy(state.sample.image)
     targetSegm:resize(state.sample.label:size()):copy(state.sample.label)
-    targetDepth:resize(state.sample.depth:size()):copy(state.sample.depth)
+    -- targetDepth:resize(state.sample.depth:size()):copy(state.sample.depth)
     targetInst:resize(state.sample.instances:size()):copy(state.sample.instances)
 
     state.sample.input = input
@@ -172,7 +171,7 @@ engine.hooks.onForwardCriterion = function(state)
     lossMeter:add(criterion.output)
     segmMeter:add(segmentation_criterion.output)
     instMeter:add(instance_criterion.output)
-    depthMeter:add(depth_criterion.output)
+
 
     -- display results
     if (opts.display == true) then
@@ -180,7 +179,7 @@ engine.hooks.onForwardCriterion = function(state)
             win1 = image.display({image = state.sample.input[1], win = win1, legend = 'input image', zoom = 0.5})
             win2 = image.display({image = tools.to_color(state.sample.target[1][1], 21), win = win2, legend = 'labels gt', zoom = 0.5})
             win3 = image.display({image = tools.to_color(state.sample.target[2][1], 256), win = win3, legend = 'instances gt', zoom = 0.5})
-            win4 = image.display({image = state.sample.target[3][1], win = win4, legend = 'depth gt', zoom = 0.5})
+
 
             local out = state.network.output[1][1]:float()
             local _, classes = torch.max(out, 1)
@@ -190,8 +189,7 @@ engine.hooks.onForwardCriterion = function(state)
             local inst_clustered = cluster.clusterWithLabels(out_inst, state.sample.target[2][1]:byte(), 1.5)
             win6 = image.display({image = tools.to_color(inst_clustered, 256), win = win6, legend = 'instances', zoom = 0.5})
 
-            local out_depth = state.network.output[3][1]:float()
-            win7 = image.display({image = out_depth, win = win7, legend = 'depth', zoom = 0.5})
+
         end
     end
 end
@@ -201,7 +199,6 @@ engine.hooks.onEndEpoch =
     local train_loss = lossMeter:value()
     local train_segm_loss = segmMeter:value()
     local train_inst_loss = instMeter:value()
-    local train_depth_loss = depthMeter:value()
     print('average train loss: ' .. train_loss)
 
     if (opts.save == true) then
@@ -227,7 +224,6 @@ engine.hooks.onEndEpoch =
         local val_loss = lossMeter:value()
         local val_segm_loss = segmMeter:value()
         local val_inst_loss = instMeter:value()
-        local val_depth_loss = depthMeter:value()
         print('average val loss: ' .. val_loss)
 
         if (opts.save == true) then
@@ -241,13 +237,13 @@ engine.hooks.onEndEpoch =
         logger:add {train_loss, val_loss}
         logger:plot()
 
-        logger_seperate:add {train_segm_loss, train_inst_loss, train_depth_loss, val_segm_loss, val_inst_loss, val_depth_loss}
+        logger_seperate:add {train_segm_loss, train_inst_loss, val_segm_loss, val_inst_loss}
         logger_seperate:plot()
     else
         logger:add {train_loss}
         logger:plot()
 
-        logger_seperate:add {train_segm_loss, train_inst_loss, train_depth_loss}
+        logger_seperate:add {train_segm_loss, train_inst_loss}
         logger_seperate:plot()
     end
 

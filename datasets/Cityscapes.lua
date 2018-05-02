@@ -41,10 +41,10 @@ function Cityscapes.__init(self, parent_path, mode)
 
     if (mode ~= 'test') then
         self.csv_labels = pl.data.read(paths.concat(parent_path, mode .. 'Labels.txt'), {fieldnames = ''})
-        self.csv_depth = pl.data.read(paths.concat(parent_path, mode .. 'Depth.txt'), {fieldnames = ''})
+
         self.csv_instances = pl.data.read(paths.concat(parent_path, mode .. 'Instances.txt'), {fieldnames = ''})
 
-        assert((#self.csv_images == #self.csv_labels and #self.csv_labels == #self.csv_instances and #self.csv_instances == #self.csv_depth), 'Size of csv-files or not equal. (' .. #self.csv_images .. ',' .. #self.csv_labels .. ',' .. #self.csv_instances .. ',' .. #self.csv_depth .. ')')
+        assert((#self.csv_images == #self.csv_labels and #self.csv_labels == #self.csv_instances ), 'Size of csv-files or not equal. (' .. #self.csv_images .. ',' .. #self.csv_labels .. ',' .. #self.csv_instances ..  ')')
     end
 
     self.parent_path = parent_path
@@ -68,11 +68,6 @@ function Cityscapes.get(self, idx)
         -- squeeze label to dim hxw
         label = label:squeeze()
 
-        -- Loading depth map
-        local depthFile = self.csv_depth[idx][1]
-        local depth = image.load(paths.concat(self.parent_path, depthFile), 1, 'float')
-        depth = depth:squeeze()
-
         -- Loading instance map
         local instanceFile = self.csv_instances[idx][1]
         local instances = image.load(paths.concat(self.parent_path, instanceFile), 1, 'float')
@@ -82,7 +77,7 @@ function Cityscapes.get(self, idx)
         instances[label:ne(15)] = 0
         instances = instances:byte()
 
-        return {image = im, label = label, depth = depth, instances = instances, name = name}
+        return {image = im, label = label, instances = instances, name = name}
     else
         return {image = im, name = name}
     end

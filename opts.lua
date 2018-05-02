@@ -22,7 +22,7 @@ function M.parse(arg)
     ------------- Model options -----------------------
 
     cmd:option('-model', 'enetBranchedPretrained', 'model: enetBranchedPretrained')
-    cmd:option('-nOutputs', {20, 8, 1}, 'number of output features of branches')
+    cmd:option('-nOutputs', {20, 8}, 'number of output features of branches')
     cmd:option('-freezeBN', 'true')
 
     ------------- Loss options ------------------------

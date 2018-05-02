@@ -10,7 +10,7 @@ local function getTransformations(opts, mode)
     if (mode == 'test') then
         table.insert(transf, transforms.Scale(opts.size, {'image'}, {'bicubic'}, false))
     else
-        table.insert(transf, transforms.Scale(opts.size, {'image', 'label', 'depth', 'instances'}, {'bicubic', 'simple', 'simple', 'simple'}, false))
+        table.insert(transf, transforms.Scale(opts.size, {'image', 'label', 'instances'}, {'bicubic', 'simple', 'simple'}, false))
     end
 
     -- add other transformations, as random crop/scale/rotation ...
